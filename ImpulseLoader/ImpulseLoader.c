@@ -305,6 +305,8 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     ps->fname = NULL;
     ps->filepicker = (FilePicker*)malloc(sizeof(FilePicker));
     fp_init(ps->filepicker, "/");
+    asprintf(&ps->filepicker->filter ,"%s", "audio");
+    ps->filepicker->use_filter = 1;
 #endif
 
 #ifdef __linux__
