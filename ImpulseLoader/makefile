@@ -9,6 +9,7 @@
 	endif
 
 	# check CPU and supported optimization flags
+	ifneq ("$(wildcard /proc/cpuinfo)","")
 	ifneq ($(shell cat /proc/cpuinfo | grep sse3 ) , )
 		SSE_CFLAGS = -msse3 -mfpmath=sse -mfxsr
 	else ifneq ($(shell cat /proc/cpuinfo | grep sse2 ) , )
@@ -28,9 +29,10 @@
 	else
 		SSE_CFLAGS =
 	endif
+	endif
 
 	# set bundle name
-	NAME = ImpulseLoader
+	NAME = ImpulseLoaderStereo
 	BUNDLE = $(NAME).lv2
 	VER = 0.9.2
 

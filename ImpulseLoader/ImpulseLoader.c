@@ -7,14 +7,14 @@
 #define TAB_ELEMENTS 0
 
 
-#define PLUGIN_UI_URI "urn:brummer:ImpulseLoader_ui"
+#define PLUGIN_UI_URI "urn:brummer:ImpulseLoaderStereo_ui"
 
 
 #include "lv2_plugin.h"
 
 #ifdef USE_ATOM
 
-#define XLV2__IRFILE "urn:brummer:ImpulseLoader#irfile"
+#define XLV2__IRFILE "urn:brummer:ImpulseLoaderStereo#irfile"
 #define OBJ_BUF_SIZE 1024
 
 
@@ -90,7 +90,7 @@ void set_costum_theme(Widget_t *w) {
     w->color_scheme->selected = (Colors) {
          /* cairo    / r  / g  / b  / a  /  */
         .fg =       { 0.900, 0.900, 0.900, 1.000},
-        .bg =       { 0.13, 0.13, 0.15, 1.000},
+        .bg =       { 0.13, 0.13, 0.18, 1.000},
         .base =     { 0.500, 0.180, 0.180, 1.000},
         .text =     { 1.000, 1.000, 1.000, 1.000},
         .shadow =   { 0.800, 0.180, 0.180, 0.200},
@@ -134,7 +134,7 @@ static void notify_dsp(X11_UI *ui) {
     LV2_Atom_Forge_Frame frame;
     LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_object(&ps->forge, &frame, 0, uris->patch_Get);
 
-    ui->write_function(ui->controller, 5, lv2_atom_total_size(msg),
+    ui->write_function(ui->controller, 7, lv2_atom_total_size(msg),
                        ps->uris.atom_eventTransfer, msg);
 }
 
@@ -164,7 +164,7 @@ static void file_load_response(void *w_, void* user_data) {
         uint8_t obj_buf[OBJ_BUF_SIZE];
         lv2_atom_forge_set_buffer(&ps->forge, obj_buf, OBJ_BUF_SIZE);
         LV2_Atom* msg = (LV2_Atom*)write_set_file(&ps->forge, urid, &ps->uris, ps->filename);
-        ui->write_function(ui->controller, 5, lv2_atom_total_size(msg),
+        ui->write_function(ui->controller, 7, lv2_atom_total_size(msg),
                            ps->uris.atom_eventTransfer, msg);
         free(ps->filename);
         ps->filename = NULL;
@@ -216,7 +216,7 @@ void send_controller_message(Widget_t *w, const LV2_URID control) {
         break;
     }
     lv2_atom_forge_pop(&ps->forge, &frame);
-    ui->write_function(ui->controller, 5, lv2_atom_total_size(msg),
+    ui->write_function(ui->controller, 7, lv2_atom_total_size(msg),
                        ps->uris.atom_eventTransfer, msg);
 }
 
@@ -255,7 +255,7 @@ void plugin_set_window_size(int *w,int *h,const char * plugin_uri) {
 }
 
 const char* plugin_set_name() {
-    return "Impulse Loader"; //set plugin name to display on UI
+    return "Impulse Loader Stereo"; //set plugin name to display on UI
 }
 
 void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
@@ -282,17 +282,17 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     ui->widget[0]->func.user_callback = controller_callback;
 #endif
 
-    ui->widget[1] = add_lv2_knob (ui->widget[1], ui->win, 3, "Input", ui, 55,  80, 120, 140);
+    ui->widget[1] = add_lv2_knob (ui->widget[1], ui->win, 5, "Input", ui, 55,  80, 120, 140);
     set_adjustment(ui->widget[1]->adj, 0.0, 0.0, -20.0, 20.0, 0.2, CL_CONTINUOS);
     set_widget_color(ui->widget[1], 0, 0, 0.3, 0.55, 0.91, 1.0);
     set_widget_color(ui->widget[1], 0, 3,  0.682, 0.686, 0.686, 1.0);
 
-    ui->widget[2] = add_lv2_knob (ui->widget[2], ui->win, 4, "Dry/Wet ", ui, 325,  80, 120, 140);
+    ui->widget[2] = add_lv2_knob (ui->widget[2], ui->win, 6, "Dry/Wet ", ui, 325,  80, 120, 140);
     set_adjustment(ui->widget[2]->adj, 100.0, 100.0, 0.0, 100.0, 1.0, CL_CONTINUOS);
     set_widget_color(ui->widget[2], 0, 0, 0.3, 0.55, 0.91, 1.0);
     set_widget_color(ui->widget[2], 0, 3,  0.682, 0.686, 0.686, 1.0);
 
-    ui->widget[3] = add_lv2_switch (ui->widget[3], ui->win, 2, "Off/On", ui, 220,  160, 60, 60);
+    ui->widget[3] = add_lv2_switch (ui->widget[3], ui->win, 4, "Off/On", ui, 220,  160, 60, 60);
     set_widget_color(ui->widget[3], 0, 0, 0.3, 0.55, 0.91, 1.0);
     set_widget_color(ui->widget[3], 0, 3,  0.682, 0.686, 0.686, 1.0);
 

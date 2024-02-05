@@ -23,18 +23,18 @@
    a foaf:Person ;
    foaf:name "brummer" .
 
-<urn:brummer:ImpulseLoader#irfile>
+<urn:brummer:ImpulseLoaderStereo#irfile>
     a lv2:Parameter;
     mod:fileTypes "audio";
     rdfs:label "IR File";
     rdfs:range atom:Path.
 
-<urn:brummer:ImpulseLoader>
+<urn:brummer:ImpulseLoaderStereo>
    a lv2:Plugin ,
        lv2:MixerPlugin ;
    doap:maintainer <urn:name#me> ;
-   doap:name "ImpulseLoader" ;
-   lv2:project <urn:brummer:ImpulseLoader> ;
+   doap:name "ImpulseLoaderStereo" ;
+   lv2:project <urn:brummer:ImpulseLoaderStereo> ;
    lv2:requiredFeature urid:map ;
    lv2:optionalFeature lv2:hardRTCapable ;
    lv2:requiredFeature urid:map ,
@@ -47,13 +47,18 @@
    lv2:minorVersion 1 ;
    lv2:microVersion 0 ;
 
-guiext:ui <urn:brummer:ImpulseLoader_ui> ;
+guiext:ui <urn:brummer:ImpulseLoaderStereo_ui> ;
 
 rdfs:comment """
-...
+ImpulseLoaderStereo is a simple stereo IR-File loader/convolver.
+IR-File could be loaded via the internal File browser or, when supported by the host, via drag and drop.
+The Input controls the gain input for the convolution engine, it didn't affect the dry part of the Dry/Wet control.
+IR-Files will be resampled on the fly, when needed. 
+If there are more then 2 channel in the IR-File, only the first 2 channel will be loaded.
+If there are only one channel in the IR-File, it will be copied over to the second channel.
 """;
 
-    patch:writable <urn:brummer:ImpulseLoader#irfile>;
+    patch:writable <urn:brummer:ImpulseLoaderStereo#irfile>;
 
    lv2:port  [
        a lv2:AudioPort ,
@@ -68,9 +73,21 @@ rdfs:comment """
       lv2:symbol "out0" ;
       lv2:name "Out0" ;
    ], [
+      a lv2:AudioPort ,
+          lv2:InputPort ;
+      lv2:index 2 ;
+      lv2:symbol "in1" ;
+      lv2:name "In1" ;
+   ], [
+      a lv2:AudioPort ,
+           lv2:OutputPort ;
+      lv2:index 3 ;
+      lv2:symbol "out1" ;
+      lv2:name "Out1" ;
+   ], [
       a lv2:InputPort ,
           lv2:ControlPort ;
-      lv2:index 2 ;
+      lv2:index 4 ;
       lv2:designation lv2:enabled;
       lv2:portProperty lv2:toggled ;
       lv2:symbol "Bypass" ;
@@ -81,7 +98,7 @@ rdfs:comment """
    ], [
       a lv2:InputPort ,
           lv2:ControlPort ;
-      lv2:index 3 ;
+      lv2:index 5 ;
       lv2:symbol "INPUT" ;
       lv2:name "input" ;
       lv2:default 0.0 ;
@@ -90,7 +107,7 @@ rdfs:comment """
    ], [
       a lv2:InputPort ,
           lv2:ControlPort ;
-      lv2:index 4 ;
+      lv2:index 6 ;
       lv2:symbol "DRY_WET" ;
       lv2:name "dry_wet" ;
       lv2:default 100.0 ;
@@ -103,7 +120,7 @@ rdfs:comment """
         atom:bufferType atom:Sequence ;
         atom:supports patch:Message ;
         lv2:designation lv2:control ;
-        lv2:index 5 ;
+        lv2:index 7 ;
         lv2:symbol "CONTROL" ;
         lv2:name "CONTROL" ;
     ], [
@@ -113,15 +130,15 @@ rdfs:comment """
         atom:bufferType atom:Sequence ;
         atom:supports patch:Message ;
         lv2:designation lv2:control ;
-        lv2:index 6 ;
+        lv2:index 8 ;
         lv2:symbol "NOTIFY" ;
         lv2:name "NOTIFY";
     ] .
 
 
-<urn:brummer:ImpulseLoader_ui>
+<urn:brummer:ImpulseLoaderStereo_ui>
    a guiext:X11UI;
-   guiext:binary <ImpulseLoader_ui.so> ;
+   guiext:binary <ImpulseLoaderStereo_ui.so> ;
        lv2:extensionData guiext::idle ;
        lv2:extensionData guiext:resize ;
        lv2:extensionData guiext:idleInterface ;
@@ -129,7 +146,7 @@ rdfs:comment """
        lv2:optionalFeature opts:options ;
        opts:supportedOption guiext:scaleFactor ; 
         guiext:portNotification [
-            guiext:plugin  <urn:brummer:ImpulseLoader> ;
+            guiext:plugin  <urn:brummer:ImpulseLoaderStereo> ;
             lv2:symbol "NOTIFY" ;
             guiext:notifyType atom:Blank
         ] .

@@ -476,7 +476,7 @@ static void my_fbutton_callback(void *w_, void* user_data) {
     FileButton *filebutton = (FileButton *)w->private_struct;
     if (w->flags & HAS_POINTER && adj_get_value(w->adj)){
         filebutton->w = open_file_dialog(w,filebutton->path,filebutton->filter);
-        set_widget_color(filebutton->w, 2, 1, 0.13, 0.13, 0.15, 1.0);
+        set_widget_color(filebutton->w, 2, 1, 0.13, 0.13, 0.18, 1.0);
 #ifdef __linux__
         Atom wmStateAbove = XInternAtom(w->app->dpy, "_NET_WM_STATE_ABOVE", 1 );
         Atom wmNetWmState = XInternAtom(w->app->dpy, "_NET_WM_STATE", 1 );

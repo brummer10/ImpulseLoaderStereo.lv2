@@ -1,10 +1,10 @@
-# ImpulseLoader
+# ImpulseLoaderStereo
 
-This is a simple, mono, IR-File loader/convolution LV2 plug. 
+This is a simple, stereo, IR-File loader/convolution LV2 plug. 
 
-![ImpulseLoader](https://raw.githubusercontent.com/brummer10/ImpulseLoader.lv2/master/ImpulseLoader.png)
+![ImpulseLoaderStereo](https://raw.githubusercontent.com/brummer10/ImpulseLoaderStereo.lv2/master/ImpulseLoaderStereo.png)
 
-## Supported File Formats:
+## Supported File Formats
 
 - WAF
 - AIFF
@@ -13,7 +13,9 @@ This is a simple, mono, IR-File loader/convolution LV2 plug.
 
 IR-Files could be loaded via the integrated File Browser, or, when supported by the host, via drag and drop.
 
-If the IR-File have more then 1 channel, only the first channel will be used.
+If the IR-File have only 1 channel, it will be copied to the second channel.
+
+If the IR-File have more the 2 channels, only the first 2 channels will be loaded.
 
 IR-Files will be resampled on the fly to match the session Sample Rate.
 

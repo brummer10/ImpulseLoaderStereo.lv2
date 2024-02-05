@@ -21,8 +21,8 @@
 
 ///////////////////////// MACRO SUPPORT ////////////////////////////////
 
-#define PLUGIN_URI "urn:brummer:ImpulseLoader"
-#define XLV2__IRFILE "urn:brummer:ImpulseLoader#irfile"
+#define PLUGIN_URI "urn:brummer:ImpulseLoaderStereo"
+#define XLV2__IRFILE "urn:brummer:ImpulseLoaderStereo#irfile"
 
 using std::min;
 using std::max;
@@ -51,6 +51,8 @@ private:
     int32_t rt_policy;
     float* input0;
     float* output0;
+    float* input1;
+    float* output1;
     float* bypass;
     float bypass_;
     std::string ir_file;
@@ -156,6 +158,8 @@ XImpulseLoader::XImpulseLoader() :
     rt_policy(0),
     input0(NULL),
     output0(NULL),
+    input1(NULL),
+    output1(NULL),
     bypass(NULL),
     bypass_(2),
     bufsize(0),
@@ -225,12 +229,18 @@ void XImpulseLoader::connect_(uint32_t port,void* data)
             output0 = static_cast<float*>(data);
             break;
         case 2:
+            input1 = static_cast<float*>(data);
+            break;
+        case 3:
+            output1 = static_cast<float*>(data);
+            break;
+        case 4:
             bypass = static_cast<float*>(data);
             break;
-        case 5:
+        case 7:
             control = (const LV2_Atom_Sequence*)data;
             break;
-        case 6:
+        case 8:
             notify = (LV2_Atom_Sequence*)data;
             break;
         default:
@@ -265,7 +275,7 @@ void XImpulseLoader::do_work_mono()
     preampconv.set_samplerate(s_rate);
     preampconv.set_buffersize(bufsize);
 
-    preampconv.configure(ir_file, 1.0, 0.0, 0.0, 0, 0, 0);
+    preampconv.configure(ir_file, 1.0, 1.0, 0, 0, 0, 0, 0, 0);
     while (!preampconv.checkstate());
     if(!preampconv.start(rt_prio, rt_policy)) {
         printf("preamp impulse convolver update fail\n");
@@ -346,12 +356,15 @@ void XImpulseLoader::run_dsp_(uint32_t n_samples)
         schedule->schedule_work(schedule->handle,  sizeof(bool), &doit);
         _restore.store(false, std::memory_order_release);
     }
-
+    
     // do inplace processing on default
     if(output0 != input0)
         memcpy(output0, input0, n_samples*sizeof(float));
+    if(output1 != input1)
+        memcpy(output1, input1, n_samples*sizeof(float));
 
     float buf0[n_samples];
+    float buf1[n_samples];
     // check if bypass is pressed
     if (bypass_ != static_cast<uint32_t>(*(bypass))) {
         bypass_ = static_cast<uint32_t>(*(bypass));
@@ -366,13 +379,13 @@ void XImpulseLoader::run_dsp_(uint32_t n_samples)
     }
 
     memcpy(buf0, input0, n_samples*sizeof(float));
+    memcpy(buf1, input1, n_samples*sizeof(float));
     if (!bypassed) {
-        plugin1->compute(n_samples, output0, output0);
+        plugin1->compute(n_samples, output0, output1, output0, output1);
         if (!_execute.load(std::memory_order_acquire) && preampconv.is_runnable())
-            preampconv.compute(n_samples, output0, output0);
-        plugin2->compute(n_samples, buf0, output0, output0);
+            preampconv.compute(n_samples, output0, output1, output0, output1);
+        plugin2->compute(n_samples, buf0, output0, buf1, output1, output0, output1);
     }
-
     // check if ramping is needed
     if (needs_ramp_down) {
         float fade = 0;
@@ -382,6 +395,7 @@ void XImpulseLoader::run_dsp_(uint32_t n_samples)
             }
             fade = max(0.0f,ramp_down) /ramp_down_step ;
             output0[i] = output0[i] * fade + buf0[i] * (1.0 - fade);
+            output1[i] = output1[i] * fade + buf1[i] * (1.0 - fade);
         }
         if (ramp_down <= 0.0) {
             // when ramped down, clear buffer from dsp
@@ -402,6 +416,7 @@ void XImpulseLoader::run_dsp_(uint32_t n_samples)
             }
             fade = min(ramp_up_step,ramp_up) /ramp_up_step ;
             output0[i] = output0[i] * fade + buf0[i] * (1.0 - fade);
+            output1[i] = output1[i] * fade + buf1[i] * (1.0 - fade);
         }
         if (ramp_up >= ramp_up_step) {
             needs_ramp_up = false;
