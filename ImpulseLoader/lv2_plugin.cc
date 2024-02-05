@@ -447,6 +447,21 @@ Widget_t* add_lv2_switch(Widget_t *w, Widget_t *p, PortIndex index, const char *
     return w;
 }
 
+static void show_menu(void *w_, void* user_data) {
+    Widget_t *w = (Widget_t*)w_;
+    X11_UI* ui = (X11_UI*)w->parent_struct;
+    X11_UI_Private_t *ps = (X11_UI_Private_t*)ui->private_ptr;
+    pop_menu_show(w, ui->file_menu->childlist->childs[0], max(1,ps->filepicker->file_counter), true);
+}
+
+Widget_t* add_lv2_button(Widget_t *w, Widget_t *p, const char * label,
+                                X11_UI* ui, int x, int y, int width, int height) {
+    w = add_button(p, label, x, y, width, height);
+    w->parent_struct = ui;
+    w->func.value_changed_callback = show_menu;
+    return w;
+}
+
 static void my_fdialog_response(void *w_, void* user_data) {
     Widget_t *w = (Widget_t*)w_;
     FileButton *filebutton = (FileButton *)w->private_struct;

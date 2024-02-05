@@ -39,7 +39,9 @@ typedef struct {
 typedef struct {
     LV2_Atom_Forge forge;
     X11LV2URIs   uris;
+    FilePicker *filepicker;
     char *filename;
+    char *fname;
     char *dir_name;
 } X11_UI_Private_t;
 
@@ -245,6 +247,37 @@ void first_loop(X11_UI *ui) {
     notify_dsp(ui);
 }
 
+static void file_menu_callback(void *w_, void* user_data) {
+    Widget_t *w = (Widget_t*)w_;
+    Widget_t *p = (Widget_t*)w->parent;
+    X11_UI *ui = (X11_UI*) p->parent_struct;
+    X11_UI_Private_t *ps = (X11_UI_Private_t*)ui->private_ptr;
+    if (!ps->filepicker->file_counter) return;
+    int v = (int)adj_get_value(w->adj);
+    free(ps->fname);
+    ps->fname = NULL;
+    asprintf(&ps->fname, "%s%s%s", ps->dir_name, PATH_SEPARATOR, ps->filepicker->file_names[v]);
+    fprintf(stderr, "%s\n", ps->fname);
+    file_load_response(ui->widget[0], (void*)&ps->fname);
+}
+
+static void rebuild_file_menu(X11_UI *ui) {
+    ui->file_menu->func.value_changed_callback = dummy_callback;
+    X11_UI_Private_t *ps = (X11_UI_Private_t*)ui->private_ptr;
+    Widget_t *menu = ui->file_menu->childlist->childs[0];
+    Widget_t *view_port = menu->childlist->childs[0];
+    int i = view_port->childlist->elem;
+    for(;i>-1;i--) {
+        menu_remove_item(menu,view_port->childlist->childs[i]);
+    }
+    fp_get_files(ps->filepicker, ps->dir_name, 0, 1);
+    i = 0;
+    for(;i<ps->filepicker->file_counter;i++) {
+        menu_add_entry(ui->file_menu, basename(ps->filepicker->file_names[i]));
+    }
+    ui->file_menu->func.value_changed_callback = file_menu_callback;
+}
+
 void plugin_value_changed(X11_UI *ui, Widget_t *w, PortIndex index) {
     // do special stuff when needed
 }
@@ -269,6 +302,9 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     const X11LV2URIs* uris = &ps->uris;
     ps->filename = strdup("None");
     ps->dir_name = NULL;
+    ps->fname = NULL;
+    ps->filepicker = (FilePicker*)malloc(sizeof(FilePicker));
+    fp_init(ps->filepicker, "/");
 #endif
 
 #ifdef __linux__
@@ -296,11 +332,17 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     set_widget_color(ui->widget[3], 0, 0, 0.3, 0.55, 0.91, 1.0);
     set_widget_color(ui->widget[3], 0, 3,  0.682, 0.686, 0.686, 1.0);
 
+    ui->file_button = add_lv2_button(ui->file_button, ui->win, "", ui, 460,  254, 20, 30);
+    ui->file_menu = add_menu(ui->file_button,"", 0, 0, 1, 1);
+    menu_add_entry(ui->file_menu, "None");
+    ui->file_menu->func.value_changed_callback = file_menu_callback;
 }
 
 void plugin_cleanup(X11_UI *ui) {
 #ifdef USE_ATOM
     X11_UI_Private_t *ps = (X11_UI_Private_t*)ui->private_ptr;
+    fp_free(ps->filepicker);
+    free(ps->fname);
     free(ps->filename);
     free(ps->dir_name);
 #endif
@@ -364,6 +406,7 @@ void plugin_port_event(LV2UI_Handle handle, uint32_t port_index,
                             ps->dir_name = strdup(dirname((char*)uri));
                             FileButton *filebutton = (FileButton*)ui->widget[0]->private_struct;
                             filebutton->path = ps->dir_name;
+                            rebuild_file_menu(ui);
                             expose_widget(ui->win);
                         }
                     }
