@@ -171,6 +171,7 @@ static void file_load_response(void *w_, void* user_data) {
         free(ps->filename);
         ps->filename = NULL;
         ps->filename = strdup("None");
+        expose_widget(ui->win);
     }
 }
 
@@ -257,25 +258,24 @@ static void file_menu_callback(void *w_, void* user_data) {
     free(ps->fname);
     ps->fname = NULL;
     asprintf(&ps->fname, "%s%s%s", ps->dir_name, PATH_SEPARATOR, ps->filepicker->file_names[v]);
-    fprintf(stderr, "%s\n", ps->fname);
     file_load_response(ui->widget[0], (void*)&ps->fname);
 }
 
 static void rebuild_file_menu(X11_UI *ui) {
-    ui->file_menu->func.value_changed_callback = dummy_callback;
+    ui->file_button->func.value_changed_callback = dummy_callback;
     X11_UI_Private_t *ps = (X11_UI_Private_t*)ui->private_ptr;
-    Widget_t *menu = ui->file_menu->childlist->childs[0];
-    Widget_t *view_port = menu->childlist->childs[0];
-    int i = view_port->childlist->elem;
-    for(;i>-1;i--) {
-        menu_remove_item(menu,view_port->childlist->childs[i]);
-    }
+    combobox_delete_entrys(ui->file_button);
     fp_get_files(ps->filepicker, ps->dir_name, 0, 1);
-    i = 0;
+    int active_entry = ps->filepicker->file_counter-1;
+    int i = 0;
     for(;i<ps->filepicker->file_counter;i++) {
-        menu_add_entry(ui->file_menu, basename(ps->filepicker->file_names[i]));
+        combobox_add_entry(ui->file_button, ps->filepicker->file_names[i]);
+        if (strcmp(basename(ps->filename),ps->filepicker->file_names[i]) == 0) 
+            active_entry = i;
     }
-    ui->file_menu->func.value_changed_callback = file_menu_callback;
+    adj_set_value(ui->file_button->adj, active_entry);
+    combobox_set_menu_size(ui->file_button, min(14, ps->filepicker->file_counter));
+    ui->file_button->func.value_changed_callback = file_menu_callback;
 }
 
 void plugin_value_changed(X11_UI *ui, Widget_t *w, PortIndex index) {
@@ -305,7 +305,11 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     ps->fname = NULL;
     ps->filepicker = (FilePicker*)malloc(sizeof(FilePicker));
     fp_init(ps->filepicker, "/");
+#ifdef __linux__
     asprintf(&ps->filepicker->filter ,"%s", "audio");
+#else
+    asprintf(&ps->filepicker->filter ,"%s", ".wav");
+#endif
     ps->filepicker->use_filter = 1;
 #endif
 
@@ -314,7 +318,7 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
 #endif
     ui->win->func.dnd_notify_callback = dnd_load_response;
 
-    ui->widget[0] = add_lv2_file_button (ui->widget[0], ui->win, -4, "IR File", ui, 30,  254, 60, 30);
+    ui->widget[0] = add_lv2_file_button (ui->widget[0], ui->win, -4, "IR File", ui, 30,  254, 50, 30);
 #ifdef USE_ATOM
     ui->widget[0]->parent_struct = (void*)&uris->xlv2_irfile;
     ui->widget[0]->func.user_callback = controller_callback;
@@ -334,10 +338,9 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     set_widget_color(ui->widget[3], 0, 0, 0.3, 0.55, 0.91, 1.0);
     set_widget_color(ui->widget[3], 0, 3,  0.682, 0.686, 0.686, 1.0);
 
-    ui->file_button = add_lv2_button(ui->file_button, ui->win, "", ui, 460,  254, 20, 30);
-    ui->file_menu = add_menu(ui->file_button,"", 0, 0, 1, 1);
-    menu_add_entry(ui->file_menu, "None");
-    ui->file_menu->func.value_changed_callback = file_menu_callback;
+    ui->file_button = add_lv2_button(ui->file_button, ui->win, "", ui, 450,  254, 22, 30);
+    combobox_add_entry(ui->file_button, "None");
+    ui->file_button->func.value_changed_callback = file_menu_callback;
 }
 
 void plugin_cleanup(X11_UI *ui) {

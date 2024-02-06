@@ -60,7 +60,6 @@ typedef struct {
     Widget_t *widget[CONTROLS];
     Widget_t *elem[GUI_ELEMENTS];
     Widget_t *tab_elem[TAB_ELEMENTS];
-    Widget_t *file_menu;
     Widget_t *file_button;
     void *private_ptr;
     int need_resize;
