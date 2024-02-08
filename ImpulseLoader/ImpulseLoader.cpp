@@ -295,7 +295,7 @@ inline LV2_Atom* XImpulseLoader::write_set_file(LV2_Atom_Forge* forge, const cha
     lv2_atom_forge_key(forge, patch_property);
     lv2_atom_forge_urid(forge, xlv2_ir_file);
     lv2_atom_forge_key(forge, patch_value);
-    lv2_atom_forge_path(forge, filename, strlen(filename));
+    lv2_atom_forge_path(forge, filename, strlen(filename)+1);
 
     lv2_atom_forge_pop(forge, &frame);
     return set;
@@ -331,8 +331,7 @@ void XImpulseLoader::run_dsp_(uint32_t n_samples)
         if (lv2_atom_forge_is_object_type(&forge, ev->body.type)) {
             const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
             if (obj->body.otype == patch_Get) {
-                if (!ir_file.empty())
-                    write_set_file(&forge, ir_file.data());
+                write_set_file(&forge, ir_file.data());
             } else if (obj->body.otype == patch_Set) {
                 const LV2_Atom* file_path = read_set_file(obj);
                 if (file_path) {

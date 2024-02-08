@@ -9,6 +9,7 @@
 
 #define PLUGIN_UI_URI "urn:brummer:ImpulseLoaderStereo_ui"
 
+#include <sndfile.h>
 
 #include "lv2_plugin.h"
 
@@ -39,10 +40,12 @@ typedef struct {
 typedef struct {
     LV2_Atom_Forge forge;
     X11LV2URIs   uris;
+    Widget_t *wview;
     FilePicker *filepicker;
     char *filename;
     char *fname;
     char *dir_name;
+    int ir_data_size;
 } X11_UI_Private_t;
 
 static inline void map_x11ui_uris(LV2_URID_Map* map, X11LV2URIs* uris) {
@@ -248,6 +251,42 @@ void first_loop(X11_UI *ui) {
     notify_dsp(ui);
 }
 
+static float *load_ir_data(X11_UI *ui) {
+    X11_UI_Private_t *ps = (X11_UI_Private_t*)ui->private_ptr;
+    // struct to hold sound file info
+    SF_INFO info;
+    info.format = 0;
+    ps->ir_data_size = 0;
+
+    // Open the wave file for reading
+    SNDFILE *sndfile = sf_open(ps->filename, SFM_READ, &info);
+
+    if (!sndfile) {
+        fprintf(stderr, "Error: could not open file\n");;
+        return NULL;
+    }
+    // allocate buffer to read all samples in
+    float *samples = (float*) malloc(info.frames * info.channels * sizeof(float));
+    // read soundfile into buffer
+    sf_read_float(sndfile, samples, info.frames * info.channels);
+    sf_close(sndfile);
+    ps->ir_data_size = info.frames * 2;
+    // convert mono to stereo interleaved when needed
+    if (info.channels < 2) {
+        float *msamples =  (float*) malloc(info.frames * 2 * sizeof(float));
+        int i = 0;
+        int k = 0;
+        for (;i<info.frames;i++) {
+            msamples[i+k] = samples[i];
+            k++;
+            msamples[i+k] = samples[i];
+        }
+        free(samples);
+        return msamples;        
+    }
+    return samples;
+}
+
 static void file_menu_callback(void *w_, void* user_data) {
     Widget_t *w = (Widget_t*)w_;
     Widget_t *p = (Widget_t*)w->parent;
@@ -303,6 +342,7 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     ps->filename = strdup("None");
     ps->dir_name = NULL;
     ps->fname = NULL;
+    ps->ir_data_size = 0;
     ps->filepicker = (FilePicker*)malloc(sizeof(FilePicker));
     fp_init(ps->filepicker, "/");
 #ifdef __linux__
@@ -323,6 +363,8 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     ui->widget[0]->parent_struct = (void*)&uris->xlv2_irfile;
     ui->widget[0]->func.user_callback = controller_callback;
 #endif
+    ps->wview = add_lv2_waveview (ps->wview, ui->win, "", ui, 180,  80, 135, 60);
+    set_widget_color(ps->wview, 0, 0, 0.3, 0.55, 0.91, 1.0);
 
     ui->widget[1] = add_lv2_knob (ui->widget[1], ui->win, 5, "Input", ui, 55,  80, 120, 140);
     set_adjustment(ui->widget[1]->adj, 0.0, 0.0, -20.0, 20.0, 0.2, CL_CONTINUOS);
@@ -418,6 +460,10 @@ void plugin_port_event(LV2UI_Handle handle, uint32_t port_index,
                                 rebuild_file_menu(ui);
                             }
                             free(dn);
+                            float *irdata = load_ir_data(ui);
+                            if (ps->ir_data_size)
+                                update_waveview(ps->wview,irdata, ps->ir_data_size);
+                            free(irdata);
                             expose_widget(ui->win);
                         }
                     }
