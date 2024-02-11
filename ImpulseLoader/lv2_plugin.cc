@@ -540,37 +540,29 @@ static void my_fdialog_response(void *w_, void* user_data) {
     adj_set_value(w->adj,0.0);
 }
 
-static void store_config(Widget_t *w, int width, int height, float list_view, float show_hidden) {
-    FileButton *filebutton = (FileButton *)w->private_struct;
-    filebutton->conf.width = width;
-    filebutton->conf.height = height;
-    filebutton->conf.list_view = list_view;
-    filebutton->conf.show_hidden = show_hidden;
-}
-
 static void my_fbutton_callback(void *w_, void* user_data) {
     Widget_t *w = (Widget_t*)w_;
     FileButton *filebutton = (FileButton *)w->private_struct;
     if (w->flags & HAS_POINTER && adj_get_value(w->adj)){
-        filebutton->w = open_file_dialog(w,filebutton->path,filebutton->filter);
-        set_widget_color(filebutton->w, 2, 1, 0.13, 0.13, 0.18, 1.0);
-#ifdef __linux__
-        Atom wmStateAbove = XInternAtom(w->app->dpy, "_NET_WM_STATE_ABOVE", 1 );
-        Atom wmNetWmState = XInternAtom(w->app->dpy, "_NET_WM_STATE", 1 );
-        XChangeProperty(w->app->dpy, filebutton->w->widget, wmNetWmState, XA_ATOM, 32, 
-            PropModeReplace, (unsigned char *) &wmStateAbove, 1); 
-#elif defined _WIN32
-        os_set_transient_for_hint(w, filebutton->w);
-#endif
         filebutton->is_active = true;
-        FileDialog *file_dialog = (FileDialog *)filebutton->w->parent_struct;
-        file_dialog->save_config = store_config;
-        adj_set_value(file_dialog->view->adj, filebutton->conf.list_view);
-        adj_set_value(file_dialog->w_hidden->adj, filebutton->conf.show_hidden);
-        os_resize_window(w->app->dpy, filebutton->w, filebutton->conf.width, filebutton->conf.height);
+        if (!filebutton->w) {
+            filebutton->w = open_file_dialog(w,filebutton->path,filebutton->filter);
+            filebutton->w->flags |= HIDE_ON_DELETE;
+            set_widget_color(filebutton->w, 2, 1, 0.13, 0.13, 0.15, 1.0);
+#ifdef __linux__
+            Atom wmStateAbove = XInternAtom(w->app->dpy, "_NET_WM_STATE_ABOVE", 1 );
+            Atom wmNetWmState = XInternAtom(w->app->dpy, "_NET_WM_STATE", 1 );
+            XChangeProperty(w->app->dpy, filebutton->w->widget, wmNetWmState, XA_ATOM, 32, 
+                PropModeReplace, (unsigned char *) &wmStateAbove, 1); 
+#elif defined _WIN32
+            os_set_transient_for_hint(w, filebutton->w);
+#endif
+        } else {
+            widget_show_all(filebutton->w);
+        }
     } else if (w->flags & HAS_POINTER && !adj_get_value(w->adj)){
         if(filebutton->is_active)
-            destroy_widget(filebutton->w,w->app);
+            widget_hide(filebutton->w);
     }
 }
 
@@ -591,10 +583,6 @@ Widget_t *add_my_file_button(Widget_t *parent, int x, int y, int width, int heig
     filebutton->last_path = NULL;
     filebutton->w = NULL;
     filebutton->is_active = false;
-    filebutton->conf.width = 660 * parent->app->hdpi;
-    filebutton->conf.height = 415 * parent->app->hdpi;
-    filebutton->conf.list_view = 0.0;
-    filebutton->conf.show_hidden = 0.0;
     Widget_t *fbutton = add_toggle_button(parent, ". . .", x, y, width, height);
     fbutton->private_struct = filebutton;
     fbutton->flags |= HAS_MEM;
@@ -656,12 +644,13 @@ void draw_waveview(void *w_, void* user_data) {
     if (wave_view->size<1) return;
     float step = (float)(width_t-10)/(float)z+1;
     float lstep = (float)(quarter_height_t-5.0);
+    cairo_move_to(w->crb,2,quarter_height_t);
     cairo_set_line_width(w->cr,1);
     use_fg_color_scheme(w, NORMAL_);
     int i = 0;
     int k = 5;
     for (;i<wave_view->size;i++) {
-        cairo_line_to(w->crb, (float)(k+0.5)*step,(float)(quarter_height_t)+ -wave_view->wave[i]*lstep);
+        cairo_line_to(w->crb, (float)(k+2.0)*step,(float)(quarter_height_t)+ -wave_view->wave[i]*lstep);
         k++;
         i++;
     }
@@ -673,10 +662,11 @@ void draw_waveview(void *w_, void* user_data) {
     use_fg_color_scheme(w, NORMAL_);
     cairo_stroke(w->crb);
     quarter_height_t += half_height_t;
+    cairo_move_to(w->crb, 2, quarter_height_t);
     i = 0;
     k = 5;
     for (;i<wave_view->size;i++) {
-        cairo_line_to(w->crb, (float)(k+0.5)*step,(float)(quarter_height_t)+ -wave_view->wave[i]*lstep);
+        cairo_line_to(w->crb, (float)(k+2.0)*step,(float)(quarter_height_t)+ -wave_view->wave[i]*lstep);
         k++;
         i++;
     }
