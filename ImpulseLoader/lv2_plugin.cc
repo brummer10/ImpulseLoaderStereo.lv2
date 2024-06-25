@@ -638,7 +638,9 @@ void draw_waveview(void *w_, void* user_data) {
     int z = wave_view->size * 0.5;
 
     cairo_set_line_width(w->crb,1);
+    cairo_set_source_rgba(w->crb, 0.1, 0.1, 0.1, 1);
     roundrec(w->crb, 0, 0, width_t, height_t, height_t * 0.2);
+    cairo_fill_preserve(w->crb);
     boxShadowInset(w->crb,0, 0, width_t, height_t, true);
     cairo_stroke(w->crb);
     cairo_move_to(w->crb,2,quarter_height_t);
