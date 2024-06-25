@@ -204,6 +204,7 @@ void XImpulseLoader::init_dsp_(uint32_t rate, uint32_t bufsize_)
 {
     plugin1->init(rate);
     plugin2->init(rate);
+    ir_file = "None";
     s_rate = rate;
     if (!rt_policy) rt_policy = SCHED_FIFO;
     // set values for internal ramping
@@ -278,6 +279,7 @@ void XImpulseLoader::do_work_mono()
     preampconv.configure(ir_file, 1.0, 1.0, 0, 0, 0, 0, 0, 0);
     while (!preampconv.checkstate());
     if(!preampconv.start(rt_prio, rt_policy)) {
+        ir_file = "None";
         printf("preamp impulse convolver update fail\n");
     } else {
         _execute.store(false, std::memory_order_release);

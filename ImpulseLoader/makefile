@@ -50,7 +50,7 @@ ifeq ($(TARGET), Linux)
 	CXXFLAGS += -fstrength-reduce
 	endif
 
-	CFLAGS += -D_FORTIFY_SOURCE=2 -fPIC -DPIC -O2 -Wall \
+	CFLAGS += -D_FORTIFY_SOURCE=2 -fPIC -DPIC -O2 -Wall -Wno-unused-result \
 	-fstack-protector -ffast-math -fomit-frame-pointer -Wno-unused-private-field \
 	-fdata-sections -Wl,--gc-sections -Wl,-z,relro,-z,now -Wl,--exclude-libs,ALL $(SSE_CFLAGS)
 	ifeq (,$(findstring clang, $(CC)))
