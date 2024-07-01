@@ -4,7 +4,7 @@ This is a simple, stereo, IR-File loader/convolution LV2 plug.
 
 ![ImpulseLoaderStereo](https://raw.githubusercontent.com/brummer10/ImpulseLoaderStereo.lv2/master/ImpulseLoaderStereo.png)
 
-A Mono version of ImpulseLoaderStereo is here [ImpulseLoader](https://raw.githubusercontent.com/brummer10/ImpulseLoader.lv2)
+A Mono version of ImpulseLoaderStereo is here [ImpulseLoader](https://github.com/brummer10/ImpulseLoader.lv2)
 
 ## Supported File Formats
 
