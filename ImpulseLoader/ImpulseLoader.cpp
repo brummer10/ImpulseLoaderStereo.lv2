@@ -1,9 +1,12 @@
 
 #include <atomic>
+#include <mutex>
+#include <condition_variable>
 #include <cstdlib>
 #include <cmath>
 #include <iostream>
 #include <cstring>
+#include <thread>
 #include <unistd.h>
 
 
@@ -72,8 +75,7 @@ private:
     std::atomic<bool>            _execute;
     std::atomic<bool>            _notify_ui;
     std::atomic<bool>            _restore;
-    gx_resample::StreamingResampler resamp;
-    GxConvolver            preampconv;
+    SelectConvolver              conv;
     gain::Dsp* plugin1;
     wet_dry::Dsp* plugin2;
 
@@ -167,15 +169,15 @@ XImpulseLoader::XImpulseLoader() :
     needs_ramp_down(false),
     needs_ramp_up(false),
     bypassed(false),
-    preampconv(GxConvolver(resamp)),
+    conv(SelectConvolver()),
     plugin1(gain::plugin()),
     plugin2(wet_dry::plugin())
  {};
 
 // destructor
 XImpulseLoader::~XImpulseLoader() {
-    preampconv.stop_process();
-    preampconv.cleanup();
+    conv.stop_process();
+    conv.cleanup();
     plugin1->del_instance(plugin1);
     plugin2->del_instance(plugin2);
 };
@@ -266,26 +268,26 @@ void XImpulseLoader::deactivate_f()
 
 void XImpulseLoader::do_work_mono()
 {
-    if (preampconv.is_runnable()) {
-        preampconv.set_not_runnable();
-        preampconv.stop_process();
+    if (conv.is_runnable()) {
+        conv.set_not_runnable();
+        conv.stop_process();
     }
     bufsize = cur_bufsize;
 
-    preampconv.cleanup();
-    preampconv.set_samplerate(s_rate);
-    preampconv.set_buffersize(bufsize);
+    conv.cleanup();
+    conv.set_samplerate(s_rate);
+    conv.set_buffersize(bufsize);
 
-    preampconv.configure(ir_file, 1.0, 1.0, 0, 0, 0, 0, 0, 0);
-    while (!preampconv.checkstate());
-    if(!preampconv.start(rt_prio, rt_policy)) {
+    conv.configure(ir_file, 1.0, 1.0, 0, 0, 0, 0, 0, 0);
+    while (!conv.checkstate());
+    if(!conv.start(rt_prio, rt_policy)) {
         ir_file = "None";
         printf("preamp impulse convolver update fail\n");
     } else {
-        _execute.store(false, std::memory_order_release);
-        needs_ramp_up = true;
-        _notify_ui.store(true, std::memory_order_release);
+        if (!bypassed) needs_ramp_up = true;
     }
+    _execute.store(false, std::memory_order_release);
+    _notify_ui.store(true, std::memory_order_release);
 }
 
 inline LV2_Atom* XImpulseLoader::write_set_file(LV2_Atom_Forge* forge, const char* filename) {
@@ -339,7 +341,7 @@ void XImpulseLoader::run_dsp_(uint32_t n_samples)
                 if (file_path) {
                     ir_file = (const char*)(file_path+1);
                     if (!_execute.load(std::memory_order_acquire)) {
-                        needs_ramp_down = true;
+                        if (!bypassed) needs_ramp_down = true;
                         bufsize = cur_bufsize;
                         _execute.store(true, std::memory_order_release);
                         schedule->schedule_work(schedule->handle,  sizeof(bool), &doit);
@@ -350,7 +352,7 @@ void XImpulseLoader::run_dsp_(uint32_t n_samples)
     }
 
     if (!_execute.load(std::memory_order_acquire) && _restore.load(std::memory_order_acquire)) {
-        needs_ramp_down = true;
+        if (!bypassed) needs_ramp_down = true;
         bufsize = cur_bufsize;
         _execute.store(true, std::memory_order_release);
         schedule->schedule_work(schedule->handle,  sizeof(bool), &doit);
@@ -382,8 +384,8 @@ void XImpulseLoader::run_dsp_(uint32_t n_samples)
     memcpy(buf1, input1, n_samples*sizeof(float));
     if (!bypassed) {
         plugin1->compute(n_samples, output0, output1, output0, output1);
-        if (!_execute.load(std::memory_order_acquire) && preampconv.is_runnable())
-            preampconv.compute(n_samples, output0, output1, output0, output1);
+        if (!_execute.load(std::memory_order_acquire) && conv.is_runnable())
+            conv.compute(n_samples, output0, output1, output0, output1);
         plugin2->compute(n_samples, buf0, output0, buf1, output1, output0, output1);
     }
     // check if ramping is needed
@@ -542,6 +544,12 @@ XImpulseLoader::instantiate(const LV2_Descriptor* descriptor,
             printf("using block size: %d\n", bufsize);
         }
     }
+    if ((bufsize & (bufsize - 1)) == 0) {
+        self->conv.set_convolver(true);
+    } else {
+        self->conv.set_convolver(false);
+    }
+
     self->map_uris(self->map);
     lv2_atom_forge_init(&self->forge, self->map);
 
